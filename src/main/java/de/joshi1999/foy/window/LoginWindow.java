@@ -1,7 +1,14 @@
 package de.joshi1999.foy.window;
 
+import de.joshi1999.foy.listener.ChatListener;
+import org.pircbotx.Configuration;
+import org.pircbotx.PircBotX;
+import org.pircbotx.UtilSSLSocketFactory;
+import org.pircbotx.exception.IrcException;
+
 import javax.swing.*;
 import java.awt.*;
+import java.io.IOException;
 
 public class LoginWindow extends JFrame {
 
@@ -57,10 +64,30 @@ public class LoginWindow extends JFrame {
         usernameLabel.setLocation(25,55);
         usernameLabel.setVisible(true);
         add(usernameLabel);
+        usernameField.setText("joshi");
+        hostField.setText("irc.esper.net");
+        portField.setText("6697");
         setVisible(true);
     }
 
     private void login() {
+        int port;
+        if (hostLabel.getText() != null && !hostLabel.getText().equals("") && portLabel.getText() != null && !portLabel.getText().equals("")) {
+            if (usernameField.getText() != null && !usernameField.getText().equals("")) {
+                try {
+                    port = Integer.parseInt(portField.getText());
+                } catch (NumberFormatException e) {
+                    return;
+                }
+            } else {
+                return;
+            }
+        } else {
+            return;
+        }
 
+        ChatWindow chat = new ChatWindow(usernameField.getText(), hostField.getText(), port);
+
+        this.dispose();
     }
 }
