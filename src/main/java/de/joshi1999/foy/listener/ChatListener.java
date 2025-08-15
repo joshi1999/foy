@@ -16,7 +16,19 @@ public class ChatListener extends ListenerAdapter {
 
     @Override
     public void onGenericMessage(GenericMessageEvent event) {
+        //window.receiveMessage(event.getUser().getNick(), event.getMessage());
+    }
+
+    @Override
+    public void onMessage(MessageEvent event) {
+        if (event.getUser() == null) return;
         window.receiveMessage(event.getUser().getNick(), event.getMessage());
+    }
+
+    @Override
+    public void onPrivateMessage(PrivateMessageEvent event) {
+        if (event.getUser() == null) return;
+        window.receivePrivateMessage(event.getUser().getNick(), event.getMessage());
     }
 
     @Override
@@ -24,13 +36,14 @@ public class ChatListener extends ListenerAdapter {
         if (e.getUser() == null) return;
         window.addUser(e.getUser().getNick());
         window.renewUsers();
+        window.userJoin(e.getUser().getNick());
         window.receiveMessage("James", "Wir begrüßen " + e.getUser().getNick() + " ganz herzlich. Herreinspaziert.");
     }
 
     @Override
     public void onQuit(QuitEvent e) {
         window.removeUser(e.getUser().getNick());
-        window.receiveMessage("James", "Bis bald " + e.getUser().getNick() + ".");
+        window.userLeave(e.getUser().getNick());
     }
 
     @Override

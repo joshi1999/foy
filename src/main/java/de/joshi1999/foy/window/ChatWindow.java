@@ -1,6 +1,7 @@
 package de.joshi1999.foy.window;
 
 import com.google.common.collect.ImmutableList;
+import de.joshi1999.foy.events.CommandDispatcher;
 import de.joshi1999.foy.listener.ChatListener;
 import org.pircbotx.ChannelListEntry;
 import org.pircbotx.Configuration;
@@ -17,6 +18,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class ChatWindow extends JFrame {
+    // Swing Components
     JTextField inputField;
     JEditorPane chat;
     JScrollPane chatScroll;
@@ -27,16 +29,20 @@ public class ChatWindow extends JFrame {
     JButton channelChangeButton;
     Color bgColor = new Color(237, 185, 86);
 
+    // Swing helpers
     String history = "";
     Set<String> usersOfChannel;
 
     private PircBotX bot;
+
     private ChatListener listener;
+    private CommandDispatcher commandDispatcher;
+
     private String channel = "#joshi1999";
 
     public ChatWindow(String username, String host, int port) {
-
-        listener =  new ChatListener(this);
+        listener = new ChatListener(this);
+        commandDispatcher = new CommandDispatcher(this);
 
         usersOfChannel = new HashSet<>();
 
@@ -72,7 +78,7 @@ public class ChatWindow extends JFrame {
         chat = new JEditorPane();
         chat.setEditable(false);
         chat.setContentType("text/html");
-        chat.setText("<html><head><style>body { font-family: Arial; font-size: 12.5px; }</style></head><body>" + history + "</body></html>");
+        postHistoryToScreen();
         chat.setBackground(bgColor);
         chat.setFont(new Font("Arial", Font.PLAIN, 12));
         chatScroll = new JScrollPane(chat);
@@ -90,6 +96,7 @@ public class ChatWindow extends JFrame {
         userList = new JList<>(users);
         userList.setBackground(bgColor);
         userList.setVisible(true);
+        userList.setFont(new Font("Arial", Font.PLAIN, 16));
         userScroll = new JScrollPane(userList);
         userList.setVisible(true);
         userScroll.setSize(200, getContentPane().getHeight() - 50);
@@ -131,107 +138,160 @@ public class ChatWindow extends JFrame {
     }
 
     private void changeChannel() {
-        String selected = channelBox.getSelectedItem().toString();
-        changeChannel(new String[]{selected});
+        SwingUtilities.invokeLater(() -> {
+            String selected = channelBox.getSelectedItem().toString();
+            changeChannel(new String[]{selected});
+        });
     }
 
     private void updateSizes() {
-        inputField.setSize(getContentPane().getWidth(), 25);
-        inputField.setLocation(getContentPane().getX(), getContentPane().getHeight() - 25);
-        chatScroll.setLocation(getContentPane().getX(), getContentPane().getY());
-        chatScroll.setSize(getContentPane().getWidth() - 200, getContentPane().getHeight() - 25);
-        userScroll.setSize(200, getContentPane().getHeight() - 50);
-        userScroll.setLocation(getContentPane().getWidth() - 200, getContentPane().getY());
-        channelBox.setSize(150, 25);
-        channelBox.setLocation(getContentPane().getWidth() - 200, getContentPane().getHeight() - 50);
-        channelChangeButton.setSize(50, 25);
-        channelChangeButton.setLocation(getContentPane().getWidth() - 50, getContentPane().getHeight() - 50);
-        this.repaint();
+        SwingUtilities.invokeLater(() -> {
+            inputField.setSize(getContentPane().getWidth(), 25);
+            inputField.setLocation(getContentPane().getX(), getContentPane().getHeight() - 25);
+            chatScroll.setLocation(getContentPane().getX(), getContentPane().getY());
+            chatScroll.setSize(getContentPane().getWidth() - 200, getContentPane().getHeight() - 25);
+            userScroll.setSize(200, getContentPane().getHeight() - 50);
+            userScroll.setLocation(getContentPane().getWidth() - 200, getContentPane().getY());
+            channelBox.setSize(150, 25);
+            channelBox.setLocation(getContentPane().getWidth() - 200, getContentPane().getHeight() - 50);
+            channelChangeButton.setSize(50, 25);
+            channelChangeButton.setLocation(getContentPane().getWidth() - 50, getContentPane().getHeight() - 50);
+        });
     }
 
     public void retrieveChannels() {
         bot.sendIRC().listChannels();
     }
 
-    public void setBot(PircBotX bot) {
-        this.bot = bot;
+    public void postHistoryToScreen() {
+        SwingUtilities.invokeLater(() -> {
+            chat.setText("<html><head><style>body { font-family: Arial; font-size: 12px;}</style></head><body>" + history + "</body></html>");
+        });
+    }
+
+    private void clearChat() {
+        SwingUtilities.invokeLater(() -> {
+            history = "";
+            postHistoryToScreen();
+        });
+    }
+
+    private void postMessageToScreen(String string) {
+        SwingUtilities.invokeLater(() -> {
+            history += string;
+            history += "<br></br>";
+            postHistoryToScreen();
+            int x;
+            chat.selectAll();
+            x = chat.getSelectionEnd();
+            chat.select(x, x);
+        });
     }
 
     public void receiveMessage(String user, String message) {
-        history += "<b>" + user + ":</b> " + message + "<br>";
-        chat.setText("<html><head><style>body { font-family: Arial; }</style></head><body>" + history + "</body></html>");
-        chatScroll.getVerticalScrollBar().setValue(chatScroll.getVerticalScrollBar().getMaximum());
+        SwingUtilities.invokeLater(() -> {
+            String receivedMessage = "<b>" + user + ":</b></font> " + message;
+            postMessageToScreen(receivedMessage);
+        });
+    }
+
+    public void receivePrivateMessage(String user, String message) {
+        SwingUtilities.invokeLater(() -> {
+            String receivedMessage = "<font color=\"red\"><b>" + user + " (privat):</b> " + message;
+            postMessageToScreen(receivedMessage);
+        });
     }
 
     public void sendMessage(String message) {
         if (message.startsWith("/")) {
             // It's a command.
-            executeCommand(message);
+            commandDispatcher.dispatch(message);
             return;
         }
         if (!message.isEmpty()) {
             bot.sendIRC().message(channel, message);
-            history += "<b>" + bot.getUserBot().getNick() + ":</b> " + message + "<br>";
-            chat.setText("<html><head><style>body { font-family: Arial; }</style></head><body>" + history + "</body></html>");
-            chatScroll.getVerticalScrollBar().setValue(chatScroll.getVerticalScrollBar().getMaximum());
+            SwingUtilities.invokeLater(() -> {
+                String sendingMessage = "<b>" + bot.getUserBot().getNick() + ":</b> " + message;
+                postMessageToScreen(sendingMessage);
+            });
         }
     }
 
-    public void executeCommand(String message) {
-        String command = message.replaceFirst("/", "");
-        String cmd = command.split(" ")[0];
-        String[] args = command.replaceFirst(cmd + " ", "").split(" ");
-        switch (cmd) {
-            case "list": requestChannelList();
-                return;
-            case "go": changeChannel(args);
-                return;
-            default:
+    public void sendPrivateMessage(String user, String message) {
+        if (!message.isEmpty()) {
+            bot.sendIRC().message(user, message);
+            SwingUtilities.invokeLater(() -> {
+                String sendingMessage = "<font color=\"red\"><b>" + bot.getUserBot().getNick() + " (privat an " + user + "):</b></font> " + message;
+                postMessageToScreen(sendingMessage);
+            });
         }
     }
 
-    private void changeChannel(String args[]) {
+    public void changeChannel(String args[]) {
         if (args.length >= 1) {
-            bot.sendIRC().joinChannel(args[0]);
-            bot.sendRaw().rawLine("PART " + channel);
-            channel = args[0];
-            history = "";
-            users.removeAllElements();
-            chat.setText("<html><head><style>body { font-family: Arial; }</style></head><body>" + history + "</body></html>");
-            setTitle("FOY - " + channel);
+            SwingUtilities.invokeLater(() -> {
+                clearChat();
+                users.removeAllElements();
+                bot.sendIRC().joinChannel(args[0]);
+                bot.sendRaw().rawLine("PART " + channel);
+                channel = args[0];
+                setTitle("FOY - " + channel);
+            });
         }
     }
 
-    private void requestChannelList() {
+    public void requestChannelList() {
         bot.sendIRC().listChannels();
     }
 
     public void addUser(String user) {
-        usersOfChannel.add(user);
-        if (!users.contains(user)) {
-            users.addElement(user);
-        }
+        SwingUtilities.invokeLater(() -> {
+            usersOfChannel.add(user);
+            if (!users.contains(user)) {
+                users.addElement(user);
+            }
+        });
     }
 
     public void removeUser(String user) {
-        usersOfChannel.remove(user);
-        users.removeElement(user);
+        SwingUtilities.invokeLater(() -> {
+            usersOfChannel.remove(user);
+            users.removeElement(user);
+        });
     }
 
     public void renewUsers() {
-        users.clear();
-        users.add(users.size(), "James");
-        for (String s : usersOfChannel) {
-            users.add(users.size(), s);
-        }
+        SwingUtilities.invokeLater(() -> {
+            users.clear();
+            users.add(users.size(), "James");
+            for (String s : usersOfChannel) {
+                users.add(users.size(), s);
+            }
+        });
     }
 
     public void renewChannels(ImmutableList<ChannelListEntry> list) {
-        channelBox.removeAll();
-        for (ChannelListEntry e : list) {
-            channelBox.addItem(e.getName());
-        }
-        channelBox.setSelectedItem(channel);
-        receiveMessage("James", "Jungchen, die Channels sind da :)");
+        SwingUtilities.invokeLater(() -> {
+            channelBox.removeAll();
+            for (ChannelListEntry e : list) {
+                channelBox.addItem(e.getName());
+            }
+            channelBox.setSelectedItem(channel);
+            receiveMessage("James", "Jungchen, die Channels sind da :)");
+        });
+    }
+
+    public void userJoin(String user) {
+        SwingUtilities.invokeLater(() -> {
+            String message = "<font color=\"blue\">*** <b>" + user + "</b> eilt herbei.</font>";
+            postMessageToScreen(message);
+        });
+    }
+
+    public void userLeave(String user) {
+        SwingUtilities.invokeLater(() -> {
+            String message = "<font color=\"blue\">*** " + user + " hat uns verlassen.</font>";
+            postMessageToScreen(message);
+        });
     }
 }
