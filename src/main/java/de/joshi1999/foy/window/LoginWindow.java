@@ -1,14 +1,7 @@
 package de.joshi1999.foy.window;
 
-import de.joshi1999.foy.listener.ChatListener;
-import org.pircbotx.Configuration;
-import org.pircbotx.PircBotX;
-import org.pircbotx.UtilSSLSocketFactory;
-import org.pircbotx.exception.IrcException;
-
 import javax.swing.*;
 import java.awt.*;
-import java.io.IOException;
 
 public class LoginWindow extends JFrame {
 

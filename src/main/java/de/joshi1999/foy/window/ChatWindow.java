@@ -1,14 +1,16 @@
 package de.joshi1999.foy.window;
 
 import com.google.common.collect.ImmutableList;
-import de.joshi1999.foy.events.CommandDispatcher;
+import de.joshi1999.foy.command.CommandDispatcher;
+import de.joshi1999.foy.command.builtin.GoCommand;
+import de.joshi1999.foy.command.builtin.ListCommand;
+import de.joshi1999.foy.command.builtin.MsgCommand;
 import de.joshi1999.foy.listener.ChatListener;
 import org.pircbotx.ChannelListEntry;
 import org.pircbotx.Configuration;
 import org.pircbotx.PircBotX;
 import org.pircbotx.UtilSSLSocketFactory;
 import org.pircbotx.exception.IrcException;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
@@ -43,6 +45,7 @@ public class ChatWindow extends JFrame {
     public ChatWindow(String username, String host, int port) {
         listener = new ChatListener(this);
         commandDispatcher = new CommandDispatcher(this);
+        registerCommands();
 
         usersOfChannel = new HashSet<>();
 
@@ -90,7 +93,6 @@ public class ChatWindow extends JFrame {
         chatScroll.setVisible(true);
         chatScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
         chat.getCaret().setVisible(false);
-        chat.setFocusable(false);
         users = new DefaultListModel<>();
         users.add(users.size(), "James");
         userList = new JList<>(users);
@@ -137,10 +139,20 @@ public class ChatWindow extends JFrame {
         thread.start();
     }
 
+    private void registerCommands() {
+        commandDispatcher.registerCommand("list", new ListCommand(this));
+        commandDispatcher.registerCommand("go", new GoCommand(this));
+        commandDispatcher.registerCommand("msg", new MsgCommand(this));
+    }
+
+    public CommandDispatcher getCommandDispatcher() {
+        return commandDispatcher;
+    }
+
     private void changeChannel() {
         SwingUtilities.invokeLater(() -> {
             String selected = channelBox.getSelectedItem().toString();
-            changeChannel(new String[]{selected});
+            changeChannel(selected);
         });
     }
 
@@ -165,7 +177,7 @@ public class ChatWindow extends JFrame {
 
     public void postHistoryToScreen() {
         SwingUtilities.invokeLater(() -> {
-            chat.setText("<html><head><style>body { font-family: Arial; font-size: 12px;}</style></head><body>" + history + "</body></html>");
+            chat.setText("<html><head><style>body { font-family: Arial; font-size: 12px; background-image: url('https://knuddels-wiki.de/images/8/82/Background_D%C3%BCsseldorf.png'); background-repeat: no-repeat; background.attachment: fixed; background-size: cover; background-position: center center; background-attachment: fixed; }</style></head><body>" + history + "</body></html>");
         });
     }
 
@@ -227,17 +239,15 @@ public class ChatWindow extends JFrame {
         }
     }
 
-    public void changeChannel(String args[]) {
-        if (args.length >= 1) {
-            SwingUtilities.invokeLater(() -> {
-                clearChat();
-                users.removeAllElements();
-                bot.sendIRC().joinChannel(args[0]);
-                bot.sendRaw().rawLine("PART " + channel);
-                channel = args[0];
-                setTitle("FOY - " + channel);
-            });
-        }
+    public void changeChannel(String newChannel) {
+        SwingUtilities.invokeLater(() -> {
+            clearChat();
+            users.removeAllElements();
+            bot.sendIRC().joinChannel(newChannel);
+            bot.sendRaw().rawLine("PART " + channel);
+            channel = newChannel;
+            setTitle("FOY - " + channel);
+        });
     }
 
     public void requestChannelList() {
