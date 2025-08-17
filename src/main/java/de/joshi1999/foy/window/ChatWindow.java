@@ -438,6 +438,7 @@ class UserPopup extends JPopupMenu implements ActionListener {
 class BackgroundPanel extends JPanel {
     private Color bgColor;
     private String backgroundURL;
+    private BufferedImage img;
 
     public BackgroundPanel(Color bgColor, String backgroundURL) {
         this.bgColor = bgColor;
@@ -447,6 +448,14 @@ class BackgroundPanel extends JPanel {
 
     public void setBackgroundURL(String backgroundURL) {
         this.backgroundURL = backgroundURL;
+        try {
+            URL url = new URL(backgroundURL);
+            img = ImageIO.read(url);
+        } catch (MalformedURLException e) {
+
+        } catch (IOException e) {
+
+        }
     }
 
     public void setBgColor(Color bgColor) {
@@ -456,19 +465,7 @@ class BackgroundPanel extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        // Picture from internet as background
-        URL url;
-        BufferedImage img;
-        try {
-            //url = new URL("https://knuddels-wiki.de/images/8/82/Background_D%C3%BCsseldorf.png");
-            //url = new URL("https://greensurvivors.de/wp-content/uploads/2018/08/Logo_1000.png");
-            url = new URL(backgroundURL);
-            img = ImageIO.read(url);
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+
         g.setColor(bgColor);
         g.fillRect(0, 0, getWidth(), getHeight());
 
