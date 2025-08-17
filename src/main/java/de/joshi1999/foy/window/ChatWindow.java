@@ -130,6 +130,10 @@ public class ChatWindow extends JFrame {
         chatScroll.setSize(getContentPane().getWidth() - 200, getContentPane().getHeight() - 25);
         chatScroll.setVisible(true);
         chatScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+        // Repaint at scrolling
+        chatScroll.getVerticalScrollBar().addAdjustmentListener(e -> {
+            updateSizes();
+        });
         chat.getCaret().setVisible(false);
         chatScroll.setOpaque(true);
         chat.setOpaque(true);
@@ -287,14 +291,14 @@ public class ChatWindow extends JFrame {
 
     public void receiveMessage(String user, String message) {
         SwingUtilities.invokeLater(() -> {
-            String receivedMessage = "<b>" + user + ":</b></font> " + message;
+            String receivedMessage = "<b>" + user + ":</b> " + message;
             postMessageToScreen(receivedMessage);
         });
     }
 
     public void receivePrivateMessage(String user, String message) {
         SwingUtilities.invokeLater(() -> {
-            String receivedMessage = "<font color=\"red\"><b>" + user + " (privat):</b> " + message;
+            String receivedMessage = "<font color=\"red\"><b>" + user + " (privat):</b></font> " + message;
             postMessageToScreen(receivedMessage);
         });
     }
