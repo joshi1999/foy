@@ -1,6 +1,6 @@
 package de.joshi1999.foy.window;
 
-import java.awt.*;
+import java.awt.Color;
 
 public class Theme {
     private final Color backgroundColor;

@@ -1,7 +1,10 @@
 package de.joshi1999.foy.window;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JTextField;
+import java.awt.Dimension;
 
 public class LoginWindow extends JFrame {
 

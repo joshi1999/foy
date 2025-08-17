@@ -1,6 +1,7 @@
 package de.joshi1999.foy.window;
 
-import javax.swing.*;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
 
 public class UserInfoWindow extends JFrame {
     private JLabel userInfoLabel;

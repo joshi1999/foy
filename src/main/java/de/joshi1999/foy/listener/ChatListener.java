@@ -3,7 +3,13 @@ package de.joshi1999.foy.listener;
 import de.joshi1999.foy.window.ChatWindow;
 import org.pircbotx.User;
 import org.pircbotx.hooks.ListenerAdapter;
-import org.pircbotx.hooks.events.*;
+import org.pircbotx.hooks.events.ChannelInfoEvent;
+import org.pircbotx.hooks.events.ConnectEvent;
+import org.pircbotx.hooks.events.JoinEvent;
+import org.pircbotx.hooks.events.MessageEvent;
+import org.pircbotx.hooks.events.PrivateMessageEvent;
+import org.pircbotx.hooks.events.QuitEvent;
+import org.pircbotx.hooks.events.UserListEvent;
 import org.pircbotx.hooks.types.GenericMessageEvent;
 
 public class ChatListener extends ListenerAdapter {
@@ -60,6 +66,6 @@ public class ChatListener extends ListenerAdapter {
 
     @Override
     public void onConnect(ConnectEvent e) {
-        window.retrieveChannels();
+        window.requestChannelList();
     }
 }

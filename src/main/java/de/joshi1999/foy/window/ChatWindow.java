@@ -11,17 +11,39 @@ import org.pircbotx.Configuration;
 import org.pircbotx.PircBotX;
 import org.pircbotx.UtilSSLSocketFactory;
 import org.pircbotx.exception.IrcException;
-
 import javax.imageio.ImageIO;
-import javax.swing.*;
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JEditorPane;
+import javax.swing.JFrame;
+import javax.swing.JList;
+import javax.swing.JMenuItem;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -237,10 +259,6 @@ public class ChatWindow extends JFrame {
         });
     }
 
-    public void retrieveChannels() {
-        bot.sendIRC().listChannels();
-    }
-
     public void postHistoryToScreen() {
         SwingUtilities.invokeLater(() -> {
             chat.setText("<html><head><style>body { font-family: Arial; font-size: 12px; }</style></head><body>" + history + "</body></html>");
@@ -282,15 +300,17 @@ public class ChatWindow extends JFrame {
     }
 
     public void sendMessage(String message) {
+        message = message.trim();
         if (message.startsWith("/")) {
             // It's a command.
             commandDispatcher.dispatch(message);
             return;
         }
+        String finalMessage = message;
         if (!message.isEmpty()) {
             bot.sendIRC().message(channel, message);
             SwingUtilities.invokeLater(() -> {
-                String sendingMessage = "<b>" + bot.getUserBot().getNick() + ":</b> " + message;
+                String sendingMessage = "<b>" + bot.getUserBot().getNick() + ":</b> " + finalMessage;
                 postMessageToScreen(sendingMessage);
             });
         }
@@ -378,6 +398,9 @@ public class ChatWindow extends JFrame {
     public void renewChannels(ImmutableList<ChannelListEntry> list) {
         SwingUtilities.invokeLater(() -> {
             channelBox.removeAll();
+            // Sort channels
+            List<ChannelListEntry> sortedList = new ArrayList<>();
+            list.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()));
             for (ChannelListEntry e : list) {
                 channelBox.addItem(e.getName());
             }
