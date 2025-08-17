@@ -399,9 +399,9 @@ public class ChatWindow extends JFrame {
         SwingUtilities.invokeLater(() -> {
             channelBox.removeAll();
             // Sort channels
-            List<ChannelListEntry> sortedList = new ArrayList<>();
-            list.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()));
-            for (ChannelListEntry e : list) {
+            List<ChannelListEntry> sortedList = new ArrayList<>(list);
+            sortedList.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+            for (ChannelListEntry e : sortedList) {
                 channelBox.addItem(e.getName());
             }
             channelBox.setSelectedItem(channel);

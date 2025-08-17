@@ -60,7 +60,7 @@ public class LoginWindow extends JFrame {
         usernameLabel.setLocation(25,55);
         usernameLabel.setVisible(true);
         add(usernameLabel);
-        usernameField.setText("UserName");
+        usernameField.setText("");
         hostField.setText("irc.esper.net");
         portField.setText("6697");
         setVisible(true);
