@@ -57,7 +57,7 @@ public class LoginWindow extends JFrame {
         usernameLabel.setLocation(25,55);
         usernameLabel.setVisible(true);
         add(usernameLabel);
-        usernameField.setText("joshi");
+        usernameField.setText("UserName");
         hostField.setText("irc.esper.net");
         portField.setText("6697");
         setVisible(true);
@@ -81,6 +81,6 @@ public class LoginWindow extends JFrame {
 
         ChatWindow chat = new ChatWindow(usernameField.getText(), hostField.getText(), port);
 
-        this.dispose();
+        //this.dispose();
     }
 }

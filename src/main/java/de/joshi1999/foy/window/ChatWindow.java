@@ -11,11 +11,18 @@ import org.pircbotx.Configuration;
 import org.pircbotx.PircBotX;
 import org.pircbotx.UtilSSLSocketFactory;
 import org.pircbotx.exception.IrcException;
+
+import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
 import java.awt.*;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
+import java.awt.event.*;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -29,20 +36,29 @@ public class ChatWindow extends JFrame {
     JScrollPane userScroll;
     JComboBox<String> channelBox;
     JButton channelChangeButton;
+    BackgroundPanel backgroundPanel;
+    //Color bgColor = new Color(170, 201, 127);
     Color bgColor = new Color(237, 185, 86);
+    String backgroundURL = "https://knuddels-wiki.de/images/8/82/Background_D%C3%BCsseldorf.png"; // Background image URL
 
     // Swing helpers
     String history = "";
     Set<String> usersOfChannel;
+
+    private HashMap<String, Theme> themes;
 
     private PircBotX bot;
 
     private ChatListener listener;
     private CommandDispatcher commandDispatcher;
 
-    private String channel = "#joshi1999";
+    private String channel = "#FOYClient";
 
     public ChatWindow(String username, String host, int port) {
+        themes = new HashMap<>();
+        themes.put("#greensurvivors", new Theme(new Color(170, 201, 127), "https://greensurvivors.de/wp-content/uploads/2018/08/Logo_1000.png"));
+        themes.put("#default", new Theme(new Color(237, 185, 86), "https://knuddels-wiki.de/images/8/82/Background_D%C3%BCsseldorf.png"));
+
         listener = new ChatListener(this);
         commandDispatcher = new CommandDispatcher(this);
         registerCommands();
@@ -82,7 +98,7 @@ public class ChatWindow extends JFrame {
         chat.setEditable(false);
         chat.setContentType("text/html");
         postHistoryToScreen();
-        chat.setBackground(bgColor);
+        //chat.setBackground(bgColor);
         chat.setFont(new Font("Arial", Font.PLAIN, 12));
         chatScroll = new JScrollPane(chat);
         add(chatScroll);
@@ -93,17 +109,49 @@ public class ChatWindow extends JFrame {
         chatScroll.setVisible(true);
         chatScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
         chat.getCaret().setVisible(false);
+        chatScroll.setOpaque(true);
+        chat.setOpaque(true);
+        chat.setBackground(new Color(0, 0, 0, 0)); // Transparent background
+        chatScroll.setBackground(new Color(0, 0, 0, 0));
+        backgroundPanel = new BackgroundPanel(bgColor, backgroundURL);
+        backgroundPanel.setBackground(bgColor);
+        backgroundPanel.setSize(getContentPane().getWidth() - 200, getContentPane().getHeight() - 25);
+        backgroundPanel.setLocation(getContentPane().getX(), getContentPane().getY());
+        backgroundPanel.setVisible(true);
+        add(backgroundPanel);
         users = new DefaultListModel<>();
         users.add(users.size(), "James");
         userList = new JList<>(users);
         userList.setBackground(bgColor);
         userList.setVisible(true);
+        userList.setFocusable(true);
+        userList.setInheritsPopupMenu(true);
         userList.setFont(new Font("Arial", Font.PLAIN, 16));
         userScroll = new JScrollPane(userList);
         userList.setVisible(true);
         userScroll.setSize(200, getContentPane().getHeight() - 50);
         userScroll.setLocation(getContentPane().getWidth() - 200, getContentPane().getY());
         userScroll.setVisible(true);
+        // MouseListener jetzt auf userList statt userScroll setzen
+        userList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                showPopupIfRightClick(e);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                showPopupIfRightClick(e);
+            }
+
+            private void showPopupIfRightClick(MouseEvent e) {
+                if (e.isPopupTrigger() && userList.locationToIndex(e.getPoint()) != -1) {
+                    userList.setSelectedIndex(userList.locationToIndex(e.getPoint()));
+                    UserPopup popup = new UserPopup(userList);
+                    popup.show(e.getComponent(), e.getX(), e.getY());
+                }
+            }
+        });
         add(userScroll);
         channelBox = new JComboBox<>();
         channelBox.setBackground(bgColor);
@@ -128,6 +176,12 @@ public class ChatWindow extends JFrame {
             }
         });
         setVisible(true);
+        chat.addCaretListener(new CaretListener() {
+            @Override
+            public void caretUpdate(CaretEvent e) {
+                updateSizes();
+            }
+        });
 
         Thread thread = new Thread(() -> {
             try {
@@ -137,6 +191,7 @@ public class ChatWindow extends JFrame {
             }
         });
         thread.start();
+        applyTheme(channel);
     }
 
     private void registerCommands() {
@@ -151,6 +206,9 @@ public class ChatWindow extends JFrame {
 
     private void changeChannel() {
         SwingUtilities.invokeLater(() -> {
+            if (channelBox.getSelectedItem() == null) {
+                return;
+            }
             String selected = channelBox.getSelectedItem().toString();
             changeChannel(selected);
         });
@@ -162,12 +220,20 @@ public class ChatWindow extends JFrame {
             inputField.setLocation(getContentPane().getX(), getContentPane().getHeight() - 25);
             chatScroll.setLocation(getContentPane().getX(), getContentPane().getY());
             chatScroll.setSize(getContentPane().getWidth() - 200, getContentPane().getHeight() - 25);
+            backgroundPanel.setSize(getContentPane().getWidth() - 200, getContentPane().getHeight() - 25);
+            backgroundPanel.setLocation(getContentPane().getX(), getContentPane().getY());
             userScroll.setSize(200, getContentPane().getHeight() - 50);
             userScroll.setLocation(getContentPane().getWidth() - 200, getContentPane().getY());
             channelBox.setSize(150, 25);
             channelBox.setLocation(getContentPane().getWidth() - 200, getContentPane().getHeight() - 50);
             channelChangeButton.setSize(50, 25);
             channelChangeButton.setLocation(getContentPane().getWidth() - 50, getContentPane().getHeight() - 50);
+            backgroundPanel.revalidate();
+            backgroundPanel.repaint();
+            chatScroll.revalidate();
+            userScroll.revalidate();
+            chatScroll.repaint();
+            userScroll.repaint();
         });
     }
 
@@ -177,7 +243,8 @@ public class ChatWindow extends JFrame {
 
     public void postHistoryToScreen() {
         SwingUtilities.invokeLater(() -> {
-            chat.setText("<html><head><style>body { font-family: Arial; font-size: 12px; background-image: url('https://knuddels-wiki.de/images/8/82/Background_D%C3%BCsseldorf.png'); background-repeat: no-repeat; background.attachment: fixed; background-size: cover; background-position: center center; background-attachment: fixed; }</style></head><body>" + history + "</body></html>");
+            chat.setText("<html><head><style>body { font-family: Arial; font-size: 12px; }</style></head><body>" + history + "</body></html>");
+            updateSizes();
         });
     }
 
@@ -241,13 +308,43 @@ public class ChatWindow extends JFrame {
 
     public void changeChannel(String newChannel) {
         SwingUtilities.invokeLater(() -> {
+            if (newChannel == null || newChannel.isEmpty()) {
+                return;
+            }
+            if (newChannel.equals(channel)) {
+                return;
+            }
             clearChat();
-            users.removeAllElements();
+            users.clear();
+            userList.removeAll();
+            usersOfChannel.clear();
             bot.sendIRC().joinChannel(newChannel);
             bot.sendRaw().rawLine("PART " + channel);
             channel = newChannel;
             setTitle("FOY - " + channel);
+            channelBox.setSelectedItem(channel);
+            if (!channelBox.getSelectedItem().equals(channel)) {
+                channelBox.addItem(channel);
+                channelBox.setSelectedItem(channel);
+            }
+            applyTheme(channel);
         });
+    }
+
+    public void applyTheme(String channel) {
+        Theme theme = themes.get(channel);
+        if (theme == null) {
+            // If no theme is defined for the channel, use the default theme
+            theme = themes.get("#default");
+        }
+        bgColor = theme.getBackgroundColor();
+        backgroundURL = theme.getBackgroundURL();
+        backgroundPanel.setBgColor(theme.getBackgroundColor());
+        backgroundPanel.setBackgroundURL(theme.getBackgroundURL());
+        userList.setBackground(theme.getBackgroundColor());
+        channelBox.setBackground(theme.getBackgroundColor());
+        updateSizes();
+
     }
 
     public void requestChannelList() {
@@ -274,9 +371,7 @@ public class ChatWindow extends JFrame {
         SwingUtilities.invokeLater(() -> {
             users.clear();
             users.add(users.size(), "James");
-            for (String s : usersOfChannel) {
-                users.add(users.size(), s);
-            }
+            users.addAll(usersOfChannel);
         });
     }
 
@@ -303,5 +398,98 @@ public class ChatWindow extends JFrame {
             String message = "<font color=\"blue\">*** " + user + " hat uns verlassen.</font>";
             postMessageToScreen(message);
         });
+    }
+}
+
+class UserPopup extends JPopupMenu implements ActionListener {
+    String user;
+    final JMenuItem info;
+    final JMenuItem privateMessaging;
+
+    UserPopup(JList<String> users) {
+        this.user = users.getSelectedValue();
+        info = new JMenuItem("Info");
+        info.addActionListener(this);
+        privateMessaging = new JMenuItem("PM");
+        privateMessaging.addActionListener(this);
+        add(info);
+        add(privateMessaging);
+        // Probably more, but it will do the trick for now...
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        if (e.getSource() == info) {
+            info();
+        } else if (e.getSource() == privateMessaging) {
+            privateMessage();
+        }
+    }
+
+    private void info() {
+        UserInfoWindow window = new UserInfoWindow(user);
+    }
+
+    private void privateMessage() {
+
+    }
+}
+
+class BackgroundPanel extends JPanel {
+    private Color bgColor;
+    private String backgroundURL;
+
+    public BackgroundPanel(Color bgColor, String backgroundURL) {
+        this.bgColor = bgColor;
+        this.backgroundURL = backgroundURL;
+        setOpaque(false);
+    }
+
+    public void setBackgroundURL(String backgroundURL) {
+        this.backgroundURL = backgroundURL;
+    }
+
+    public void setBgColor(Color bgColor) {
+        this.bgColor = bgColor;
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        // Picture from internet as background
+        URL url;
+        BufferedImage img;
+        try {
+            //url = new URL("https://knuddels-wiki.de/images/8/82/Background_D%C3%BCsseldorf.png");
+            //url = new URL("https://greensurvivors.de/wp-content/uploads/2018/08/Logo_1000.png");
+            url = new URL(backgroundURL);
+            img = ImageIO.read(url);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        g.setColor(bgColor);
+        g.fillRect(0, 0, getWidth(), getHeight());
+
+        if (img == null) {
+            return; // If the image could not be loaded, do not draw it
+        }
+
+        // Image shall be not stretched but centered. Also it should max 50% of the width and height of the panel
+        int imgWidth = img.getWidth();
+        int imgHeight = img.getHeight();
+        int panelWidth = getWidth();
+        int panelHeight = getHeight();
+        int maxImgWidth = panelWidth / 2;
+        int maxImgHeight = panelHeight / 2;
+        double widthScale = (double) maxImgWidth / imgWidth;
+        double heightScale = (double) maxImgHeight / imgHeight;
+        double scale = Math.min(1.0, Math.min(widthScale, heightScale));
+        int drawWidth = (int) (imgWidth * scale);
+        int drawHeight = (int) (imgHeight * scale);
+        int x = (panelWidth - drawWidth) / 2;
+        int y = (panelHeight - drawHeight) / 2;
+        g.drawImage(img, x, y, drawWidth, drawHeight, null);
     }
 }
