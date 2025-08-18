@@ -30,3 +30,9 @@ The interesting part here is: Only you can see him, and he will always be on you
 When users are joining, he will greet them - These Messages are only visible to you.
 
 Also: More to come.
+
+# What's planned for 1.0?
+
+- Full capability of the IRC protocol
+- Customizable themes
+- Chat-Games integration through James
