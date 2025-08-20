@@ -1,0 +1,14 @@
+[
+  {
+    "name": "#default",
+    "backgroundColor": "#fff6a2",
+    "backgroundImage": "/themes/default.png",
+    "percentage": 80
+  },
+  {
+    "name": "#greensurvivors",
+    "backgroundColor": "#aac97f",
+    "backgroundImage": "/themes/#greensurvivors.png",
+    "percentage": 60
+  }
+]

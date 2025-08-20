@@ -6,6 +6,8 @@ import de.joshi1999.foy.command.builtin.GoCommand;
 import de.joshi1999.foy.command.builtin.ListCommand;
 import de.joshi1999.foy.command.builtin.MsgCommand;
 import de.joshi1999.foy.listener.ChatListener;
+import de.joshi1999.foy.theme.Theme;
+import de.joshi1999.foy.theme.ThemeReader;
 import org.pircbotx.ChannelListEntry;
 import org.pircbotx.Configuration;
 import org.pircbotx.PircBotX;
@@ -59,15 +61,13 @@ public class ChatWindow extends JFrame {
     JComboBox<String> channelBox;
     JButton channelChangeButton;
     BackgroundPanel backgroundPanel;
-    //Color bgColor = new Color(170, 201, 127);
-    Color bgColor = new Color(237, 185, 86);
-    String backgroundURL = "https://knuddels-wiki.de/images/8/82/Background_D%C3%BCsseldorf.png"; // Background image URL
+    Theme currentTheme;
 
     // Swing helpers
     String history = "";
     Set<String> usersOfChannel;
 
-    private HashMap<String, Theme> themes;
+    private ThemeReader themeReader;
 
     private PircBotX bot;
 
@@ -77,9 +77,9 @@ public class ChatWindow extends JFrame {
     private String channel = "#FOYClient";
 
     public ChatWindow(String username, String host, int port) {
-        themes = new HashMap<>();
-        themes.put("#greensurvivors", new Theme(new Color(170, 201, 127), "https://greensurvivors.de/wp-content/uploads/2018/08/Logo_1000.png"));
-        themes.put("#default", new Theme(new Color(237, 185, 86), "https://knuddels-wiki.de/images/8/82/Background_D%C3%BCsseldorf.png"));
+        themeReader = new ThemeReader();
+
+        currentTheme = themeReader.getTheme("#default");
 
         listener = new ChatListener(this);
         commandDispatcher = new CommandDispatcher(this);
@@ -139,8 +139,8 @@ public class ChatWindow extends JFrame {
         chat.setOpaque(true);
         chat.setBackground(new Color(0, 0, 0, 0)); // Transparent background
         chatScroll.setBackground(new Color(0, 0, 0, 0));
-        backgroundPanel = new BackgroundPanel(bgColor, backgroundURL);
-        backgroundPanel.setBackground(bgColor);
+        backgroundPanel = new BackgroundPanel(currentTheme.getBackgroundColor(), currentTheme.getBackgroundImage(), currentTheme.getPercentage());
+        backgroundPanel.setBackground(currentTheme.getBackgroundColor());
         backgroundPanel.setSize(getContentPane().getWidth() - 200, getContentPane().getHeight() - 25);
         backgroundPanel.setLocation(getContentPane().getX(), getContentPane().getY());
         backgroundPanel.setVisible(true);
@@ -148,7 +148,7 @@ public class ChatWindow extends JFrame {
         users = new DefaultListModel<>();
         users.add(users.size(), "James");
         userList = new JList<>(users);
-        userList.setBackground(bgColor);
+        userList.setBackground(currentTheme.getBackgroundColor());
         userList.setVisible(true);
         userList.setFocusable(true);
         userList.setInheritsPopupMenu(true);
@@ -180,7 +180,7 @@ public class ChatWindow extends JFrame {
         });
         add(userScroll);
         channelBox = new JComboBox<>();
-        channelBox.setBackground(bgColor);
+        channelBox.setBackground(currentTheme.getBackgroundColor());
         channelBox.addItem(channel);
         channelBox.setSize(150, 25);
         channelBox.setLocation(getContentPane().getWidth() - 200, getContentPane().getHeight() - 50);
@@ -356,19 +356,17 @@ public class ChatWindow extends JFrame {
     }
 
     public void applyTheme(String channel) {
-        Theme theme = themes.get(channel);
+        Theme theme = themeReader.getTheme(channel);
         if (theme == null) {
-            // If no theme is defined for the channel, use the default theme
-            theme = themes.get("#default");
+            theme = currentTheme; // Fallback to current theme if no theme found for channel
         }
-        bgColor = theme.getBackgroundColor();
-        backgroundURL = theme.getBackgroundURL();
+        currentTheme = theme;
         backgroundPanel.setBgColor(theme.getBackgroundColor());
-        backgroundPanel.setBackgroundURL(theme.getBackgroundURL());
+        backgroundPanel.setBackgroundImage(theme.getBackgroundImage());
+        backgroundPanel.setPercentage(theme.getPercentage());
         userList.setBackground(theme.getBackgroundColor());
         channelBox.setBackground(theme.getBackgroundColor());
         updateSizes();
-
     }
 
     public void requestChannelList() {
@@ -464,29 +462,43 @@ class UserPopup extends JPopupMenu implements ActionListener {
 
 class BackgroundPanel extends JPanel {
     private Color bgColor;
-    private String backgroundURL;
+    private String backgroundImage;
     private BufferedImage img;
+    private int percentage;
 
-    public BackgroundPanel(Color bgColor, String backgroundURL) {
+    public BackgroundPanel(Color bgColor, String backgroundImage, int percentage) {
         this.bgColor = bgColor;
-        this.backgroundURL = backgroundURL;
+        this.backgroundImage = backgroundImage;
+        this.percentage = percentage;
         setOpaque(false);
     }
 
-    public void setBackgroundURL(String backgroundURL) {
-        this.backgroundURL = backgroundURL;
-        try {
-            URL url = new URL(backgroundURL);
-            img = ImageIO.read(url);
-        } catch (MalformedURLException e) {
-
-        } catch (IOException e) {
-
+    public void setBackgroundImage(String backgroundImage) {
+        this.backgroundImage = backgroundImage;
+        // BufferedIMage from ressources
+        if (backgroundImage != null && !backgroundImage.isEmpty()) {
+            try {
+                URL imageUrl = getClass().getResource(backgroundImage);
+                if (imageUrl != null) {
+                    img = ImageIO.read(imageUrl);
+                } else {
+                    img = null; // Image not found
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                img = null; // Error loading image
+            }
+        } else {
+            img = null; // No image set
         }
     }
 
     public void setBgColor(Color bgColor) {
         this.bgColor = bgColor;
+    }
+
+    public void setPercentage(int percentage) {
+        this.percentage = percentage;
     }
 
     @Override
@@ -501,19 +513,24 @@ class BackgroundPanel extends JPanel {
         }
 
         // Image shall be not stretched but centered. Also it should max 50% of the width and height of the panel
+
+        int percent = percentage; // Percent of the panel size
+        int maxWidth = (int) (getWidth() * percent / 100.0);
+        int maxHeight = (int) (getHeight() * percent / 100.0);
+
         int imgWidth = img.getWidth();
         int imgHeight = img.getHeight();
-        int panelWidth = getWidth();
-        int panelHeight = getHeight();
-        int maxImgWidth = panelWidth / 2;
-        int maxImgHeight = panelHeight / 2;
-        double widthScale = (double) maxImgWidth / imgWidth;
-        double heightScale = (double) maxImgHeight / imgHeight;
-        double scale = Math.min(1.0, Math.min(widthScale, heightScale));
+
+        double widthScale = (double) maxWidth / imgWidth;
+        double heightScale = (double) maxHeight / imgHeight;
+        double scale = Math.min(widthScale, heightScale);
+
         int drawWidth = (int) (imgWidth * scale);
         int drawHeight = (int) (imgHeight * scale);
-        int x = (panelWidth - drawWidth) / 2;
-        int y = (panelHeight - drawHeight) / 2;
+
+        int x = (getWidth() - drawWidth) / 2;
+        int y = (getHeight() - drawHeight) / 2;
+
         g.drawImage(img, x, y, drawWidth, drawHeight, null);
     }
 }
