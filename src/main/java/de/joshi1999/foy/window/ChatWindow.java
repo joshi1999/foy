@@ -5,6 +5,7 @@ import de.joshi1999.foy.command.CommandDispatcher;
 import de.joshi1999.foy.command.builtin.GoCommand;
 import de.joshi1999.foy.command.builtin.ListCommand;
 import de.joshi1999.foy.command.builtin.MsgCommand;
+import de.joshi1999.foy.command.builtin.TopicCommand;
 import de.joshi1999.foy.listener.ChatListener;
 import de.joshi1999.foy.theme.Theme;
 import de.joshi1999.foy.theme.ThemeReader;
@@ -75,6 +76,7 @@ public class ChatWindow extends JFrame {
     private CommandDispatcher commandDispatcher;
 
     private String channel = "#FOYClient";
+    private String topic = "";
 
     public ChatWindow(String username, String host, int port) {
         themeReader = new ThemeReader();
@@ -224,6 +226,11 @@ public class ChatWindow extends JFrame {
         commandDispatcher.registerCommand("list", new ListCommand(this));
         commandDispatcher.registerCommand("go", new GoCommand(this));
         commandDispatcher.registerCommand("msg", new MsgCommand(this));
+        commandDispatcher.registerCommand("topic", new TopicCommand(this));
+    }
+
+    public PircBotX getBot() {
+        return bot;
     }
 
     public CommandDispatcher getCommandDispatcher() {
@@ -237,6 +244,21 @@ public class ChatWindow extends JFrame {
             }
             String selected = channelBox.getSelectedItem().toString();
             changeChannel(selected);
+        });
+    }
+
+    public void setTopic(String topic) {
+        this.topic = topic;
+        showTopic(false);
+    }
+
+    public void showTopic(boolean force) {
+        SwingUtilities.invokeLater(() -> {
+            if (topic == null || topic.isEmpty() && force) {
+                receivePrivateMessage("James", "Es gibt kein Thema für diesen Channel.");
+            } else {
+                receivePrivateMessage("James", "Das Thema des Channels ist: " + topic);
+            }
         });
     }
 

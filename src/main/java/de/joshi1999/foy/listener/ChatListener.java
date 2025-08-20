@@ -12,6 +12,7 @@ import org.pircbotx.hooks.events.NoticeEvent;
 import org.pircbotx.hooks.events.PrivateMessageEvent;
 import org.pircbotx.hooks.events.QuitEvent;
 import org.pircbotx.hooks.events.ServerResponseEvent;
+import org.pircbotx.hooks.events.TopicEvent;
 import org.pircbotx.hooks.events.UserListEvent;
 import org.pircbotx.hooks.types.GenericMessageEvent;
 
@@ -87,7 +88,6 @@ public class ChatListener extends ListenerAdapter {
         }
     }
 
-
     @Override
     public void onChannelInfo(ChannelInfoEvent e) {
         window.renewChannels(e.getList());
@@ -96,5 +96,10 @@ public class ChatListener extends ListenerAdapter {
     @Override
     public void onConnect(ConnectEvent e) {
         window.requestChannelList();
+    }
+
+    @Override
+    public void onTopic(TopicEvent e) {
+        window.setTopic(e.getTopic());
     }
 }
