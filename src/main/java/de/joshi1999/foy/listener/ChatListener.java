@@ -14,6 +14,7 @@ import org.pircbotx.hooks.events.QuitEvent;
 import org.pircbotx.hooks.events.ServerResponseEvent;
 import org.pircbotx.hooks.events.TopicEvent;
 import org.pircbotx.hooks.events.UserListEvent;
+import org.pircbotx.hooks.events.WhoisEvent;
 import org.pircbotx.hooks.types.GenericMessageEvent;
 
 public class ChatListener extends ListenerAdapter {
@@ -101,5 +102,10 @@ public class ChatListener extends ListenerAdapter {
     @Override
     public void onTopic(TopicEvent e) {
         window.setTopic(e.getTopic());
+    }
+
+    @Override
+    public void onWhois(WhoisEvent e) {
+        window.completeUserInfo(e);
     }
 }

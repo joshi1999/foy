@@ -14,6 +14,8 @@ import org.pircbotx.Configuration;
 import org.pircbotx.PircBotX;
 import org.pircbotx.UtilSSLSocketFactory;
 import org.pircbotx.exception.IrcException;
+import org.pircbotx.hooks.events.WhoisEvent;
+
 import javax.imageio.ImageIO;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -41,17 +43,20 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.HashMap;
+import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
 
 public class ChatWindow extends JFrame {
+    ChatWindow instance;
+
     // Swing Components
     JTextField inputField;
     JEditorPane chat;
@@ -78,7 +83,10 @@ public class ChatWindow extends JFrame {
     private String channel = "#FOYClient";
     private String topic = "";
 
+    private HashMap<String, UserInfoWindow> userInfoWindows = new HashMap<>();
+
     public ChatWindow(String username, String host, int port) {
+        instance = this;
         themeReader = new ThemeReader();
 
         currentTheme = themeReader.getTheme("#default");
@@ -175,7 +183,7 @@ public class ChatWindow extends JFrame {
             private void showPopupIfRightClick(MouseEvent e) {
                 if (e.isPopupTrigger() && userList.locationToIndex(e.getPoint()) != -1) {
                     userList.setSelectedIndex(userList.locationToIndex(e.getPoint()));
-                    UserPopup popup = new UserPopup(userList);
+                    UserPopup popup = new UserPopup(userList, instance);
                     popup.show(e.getComponent(), e.getX(), e.getY());
                 }
             }
@@ -446,20 +454,57 @@ public class ChatWindow extends JFrame {
             postMessageToScreen(message);
         });
     }
+
+    public boolean hasUserInfoWindow(String user) {
+        return userInfoWindows.containsKey(user);
+    }
+
+    public UserInfoWindow getUserInfoWindow(String user) {
+        return userInfoWindows.get(user);
+    }
+
+    public void setUserInfoWindow(String user, UserInfoWindow window) {
+        userInfoWindows.put(user, window);
+        window.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent windowEvent) {
+                userInfoWindows.remove(user);
+            }
+        });
+    }
+
+    public void completeUserInfo(WhoisEvent event) {
+        if (event.getNick().isEmpty()) {
+            return;
+        }
+        if (!hasUserInfoWindow(event.getNick())) {
+            return;
+        }
+        UserInfoWindow userInfoWindow = getUserInfoWindow(event.getNick());
+        userInfoWindow.completeUserInfo(event);
+    }
+
+    public Theme getCurrentTheme() {
+        return currentTheme;
+    }
 }
 
 class UserPopup extends JPopupMenu implements ActionListener {
     String user;
     final JMenuItem info;
     final JMenuItem privateMessaging;
+    private final ChatWindow parentWindow;
 
-    UserPopup(JList<String> users) {
+    UserPopup(JList<String> users, ChatWindow parentWindow) {
+        this.parentWindow = parentWindow;
         this.user = users.getSelectedValue();
-        info = new JMenuItem("Info");
+        info = new JMenuItem("Whois");
         info.addActionListener(this);
         privateMessaging = new JMenuItem("PM");
         privateMessaging.addActionListener(this);
-        add(info);
+        if (!user.equals("James")) {
+            add(info);
+        }
         add(privateMessaging);
         // Probably more, but it will do the trick for now...
     }
@@ -474,7 +519,14 @@ class UserPopup extends JPopupMenu implements ActionListener {
     }
 
     private void info() {
-        UserInfoWindow window = new UserInfoWindow(user);
+        if (user == null || user.isEmpty() || user.equals("James")) {
+            return;
+        }
+        if (parentWindow.hasUserInfoWindow(user)) {
+            parentWindow.getUserInfoWindow(user).toFront();
+            return;
+        }
+        parentWindow.setUserInfoWindow(user, new UserInfoWindow(user, parentWindow, parentWindow.getCurrentTheme().getBackgroundColor()));
     }
 
     private void privateMessage() {
